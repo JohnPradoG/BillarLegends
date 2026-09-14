@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.billarlegends.nfcprototype.card.CardLayout
 import com.billarlegends.nfcprototype.nfc.DiagnosticResult
 import com.billarlegends.nfcprototype.nfc.SectorDiagnostic
 
@@ -133,17 +134,24 @@ private fun SectorRow(sector: SectorDiagnostic) {
                 text = "Sector ${sector.sector}" + if (sector.isManufacturerSector) " (fabricante)" else "",
                 fontWeight = FontWeight.Bold
             )
+            Text(text = CardLayout.labelFor(sector.sector), style = MaterialTheme.typography.bodySmall)
             if (sector.isManufacturerSector) {
                 Text("NO MODIFICAR", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
             }
             Divider(modifier = Modifier.padding(vertical = 4.dp))
             Text(
                 text = "[${if (sector.canRead) "LECTURA OK" else "LECTURA NO"}] " +
-                    "[ESCRITURA: NO EVALUADA EN FASE 1]"
+                    "[ESCRITURA: NO EVALUADA]"
             )
             Text(text = sector.statusMessage)
             if (sector.authKeyUsed != null) {
                 Text(text = "Clave usada (fábrica, pública): ${sector.authKeyUsed}", style = MaterialTheme.typography.bodySmall)
+            }
+            if (sector.rawDataHex != null) {
+                Text(
+                    text = "Datos crudos (bloque de datos 1): ${sector.rawDataHex}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

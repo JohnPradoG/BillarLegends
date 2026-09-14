@@ -127,12 +127,12 @@ object MifareClassicDiagnostics {
         }
 
         val firstBlock = mifare.sectorToBlock(sector)
-        val canRead = try {
-            mifare.readBlock(firstBlock)
-            true
+        val rawDataHex = try {
+            mifare.readBlock(firstBlock).toHex()
         } catch (_: Exception) {
-            false
+            null
         }
+        val canRead = rawDataHex != null
 
         return SectorDiagnostic(
             sector = sector,
@@ -140,8 +140,9 @@ object MifareClassicDiagnostics {
             authenticated = true,
             authKeyUsed = authKeyUsed,
             canRead = canRead,
-            canWrite = null, // La Fase 1 nunca prueba escritura. Se evalúa explícitamente en Fase 4.
-            statusMessage = if (canRead) "LECTURA OK" else "AUTENTICADO PERO LECTURA FALLÓ"
+            canWrite = null, // Nunca se prueba escritura automáticamente. Se evalúa explícitamente y con confirmación en fases posteriores.
+            statusMessage = if (canRead) "LECTURA OK" else "AUTENTICADO PERO LECTURA FALLÓ",
+            rawDataHex = rawDataHex
         )
     }
 
@@ -169,5 +170,6 @@ data class SectorDiagnostic(
     val authKeyUsed: String?,
     val canRead: Boolean,
     val canWrite: Boolean?, // null = no evaluado en esta fase
-    val statusMessage: String
+    val statusMessage: String,
+    val rawDataHex: String? = null
 )
