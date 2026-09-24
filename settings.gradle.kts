@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "BillarLegends"
 include(":app")
+include(":portfolio")
