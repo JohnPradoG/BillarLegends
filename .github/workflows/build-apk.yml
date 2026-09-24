@@ -20,8 +20,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # ubuntu-latest runners ship with the Android SDK preinstalled (ANDROID_HOME /
+      # ANDROID_SDK_ROOT already point at platforms + build-tools), so no extra SDK setup
+      # action is needed here.
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
