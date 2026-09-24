@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.billarlegends.pdfreader.pdf.DocumentType
 import com.billarlegends.pdfreader.pdf.LibraryEntry
 import com.billarlegends.pdfreader.pdf.PdfUiState
 
@@ -50,10 +52,10 @@ fun LibraryScreen(
     var entryPendingDelete by remember { mutableStateOf<LibraryEntry?>(null) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Mis PDFs") }) },
+        topBar = { TopAppBar(title = { Text("Mis documentos") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onImportClick) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Agregar PDF")
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Agregar PDF o Word")
             }
         },
         snackbarHost = {
@@ -81,11 +83,11 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Todavía no tienes PDFs guardados.",
+                        text = "Todavía no tienes documentos guardados.",
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = "Toca + para agregar uno desde tu dispositivo.",
+                        text = "Toca + para agregar un PDF o Word (.docx) desde tu dispositivo.",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -113,7 +115,7 @@ fun LibraryScreen(
     entryPendingDelete?.let { entry ->
         AlertDialog(
             onDismissRequest = { entryPendingDelete = null },
-            title = { Text("Eliminar PDF") },
+            title = { Text("Eliminar documento") },
             text = { Text("¿Eliminar \"${entry.displayName}\" de tus archivos guardados? Esta acción no se puede deshacer.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -147,7 +149,11 @@ private fun LibraryRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.PictureAsPdf,
+                imageVector = if (entry.type == DocumentType.PDF) {
+                    Icons.Default.PictureAsPdf
+                } else {
+                    Icons.Default.Description
+                },
                 contentDescription = null,
                 modifier = Modifier.padding(end = 16.dp)
             )

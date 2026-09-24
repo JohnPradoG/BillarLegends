@@ -40,18 +40,23 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Copies [uri] into the app's private storage and opens the copy. Used for both the
-     * file picker and PDFs received from other apps (share / "open with"). */
+     * file picker and documents received from other apps (share / "open with"). */
     fun importAndOpen(uri: Uri) {
         viewModelScope.launch {
             setBusy(true)
+            val displayName = queryDisplayName(uri)
+            val type = inferDocumentType(uri, displayName)
+            if (type == null) {
+                showLibraryError("Formato no compatible. Esta app abre archivos PDF y Word (.docx).")
+                return@launch
+            }
             try {
-                val displayName = queryDisplayName(uri)
                 val entry = withContext(Dispatchers.IO) {
-                    repository.importDocument(uri, displayName)
+                    repository.importDocument(uri, displayName, type)
                 }
                 openEntryInternal(entry)
             } catch (e: Exception) {
-                showLibraryError("No se pudo importar el PDF: ${e.message ?: "error desconocido"}")
+                showLibraryError("No se pudo importar el archivo: ${e.message ?: "error desconocido"}")
             }
         }
     }
@@ -111,27 +116,40 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
         closeCurrentDocumentLocked()
 
         uiState = try {
-            val file = repository.fileFor(entry)
-            val descriptor = withContext(Dispatchers.IO) {
-                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            when (entry.type) {
+                DocumentType.PDF -> openPdfEntry(entry)
+                DocumentType.DOCX -> openDocxEntry(entry)
             }
-            val newRenderer = withContext(Dispatchers.IO) { PdfRenderer(descriptor) }
-
-            fileDescriptor = descriptor
-            renderer = newRenderer
-
-            PdfUiState.Loaded(entry = entry, pageCount = newRenderer.pageCount)
         } catch (e: SecurityException) {
             PdfUiState.Library(
                 entries = withContext(Dispatchers.IO) { repository.listEntries() },
-                errorMessage = "Este PDF está protegido con contraseña y no se puede abrir."
+                errorMessage = "Este archivo está protegido con contraseña y no se puede abrir."
             )
         } catch (e: Exception) {
             PdfUiState.Library(
                 entries = withContext(Dispatchers.IO) { repository.listEntries() },
-                errorMessage = "No se pudo abrir el PDF: ${e.message ?: "error desconocido"}"
+                errorMessage = "No se pudo abrir el archivo: ${e.message ?: "error desconocido"}"
             )
         }
+    }
+
+    private suspend fun openPdfEntry(entry: LibraryEntry): PdfUiState {
+        val file = repository.fileFor(entry)
+        val descriptor = withContext(Dispatchers.IO) {
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        }
+        val newRenderer = withContext(Dispatchers.IO) { PdfRenderer(descriptor) }
+
+        fileDescriptor = descriptor
+        renderer = newRenderer
+
+        return PdfUiState.LoadedPdf(entry = entry, pageCount = newRenderer.pageCount)
+    }
+
+    private suspend fun openDocxEntry(entry: LibraryEntry): PdfUiState {
+        val file = repository.fileFor(entry)
+        val text = withContext(Dispatchers.IO) { DocxTextExtractor.extractText(file) }
+        return PdfUiState.LoadedText(entry = entry, content = text)
     }
 
     /** Acquires [renderMutex] itself, so it never races an in-flight [renderPage] call. */
@@ -172,12 +190,23 @@ class PdfViewModel(application: Application) : AndroidViewModel(application) {
                     .query(uri, null, null, null, null)?.use { cursor ->
                         val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                         if (nameIndex >= 0 && cursor.moveToFirst()) {
-                            return cursor.getString(nameIndex) ?: "Documento PDF"
+                            return cursor.getString(nameIndex) ?: "Documento"
                         }
                     }
             }
         }
-        return uri.lastPathSegment ?: "Documento PDF"
+        return uri.lastPathSegment ?: "Documento"
+    }
+
+    private fun inferDocumentType(uri: Uri, displayName: String): DocumentType? {
+        val mimeType = getApplication<Application>().contentResolver.getType(uri)
+        return when {
+            mimeType == "application/pdf" -> DocumentType.PDF
+            mimeType == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> DocumentType.DOCX
+            displayName.endsWith(".pdf", ignoreCase = true) -> DocumentType.PDF
+            displayName.endsWith(".docx", ignoreCase = true) -> DocumentType.DOCX
+            else -> null
+        }
     }
 
     override fun onCleared() {

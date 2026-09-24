@@ -34,21 +34,42 @@
                 <data android:scheme="file" android:mimeType="application/pdf" />
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="file"
+                    android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            </intent-filter>
+
             <!-- Some file managers/browsers omit the mimeType and instead match by the
                  file extension in the path, so also match any content/file URI ending
-                 in .pdf regardless of the (possibly missing or generic) mimeType. -->
+                 in .pdf or .docx regardless of the (possibly missing or generic) mimeType. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" android:pathPattern=".*\\.pdf" />
                 <data android:scheme="file" android:pathPattern=".*\\.pdf" />
+                <data android:scheme="content" android:pathPattern=".*\\.docx" />
+                <data android:scheme="file" android:pathPattern=".*\\.docx" />
             </intent-filter>
 
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
             </intent-filter>
         </activity>
 

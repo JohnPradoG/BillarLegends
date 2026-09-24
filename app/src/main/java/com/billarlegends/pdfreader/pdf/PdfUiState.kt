@@ -7,8 +7,13 @@ sealed interface PdfUiState {
         val errorMessage: String? = null
     ) : PdfUiState
 
-    data class Loaded(
+    data class LoadedPdf(
         val entry: LibraryEntry,
         val pageCount: Int
+    ) : PdfUiState
+
+    data class LoadedText(
+        val entry: LibraryEntry,
+        val content: String
     ) : PdfUiState
 }

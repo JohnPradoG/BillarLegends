@@ -7,17 +7,24 @@ import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
+enum class DocumentType(val extension: String) {
+    PDF("pdf"),
+    DOCX("docx")
+}
+
 data class LibraryEntry(
     val id: String,
     val displayName: String,
     val addedAt: Long,
-    val sizeBytes: Long
+    val sizeBytes: Long,
+    val type: DocumentType
 )
 
 /**
- * Keeps imported PDFs as private copies under the app's internal storage, so they remain
- * available even if the original file (picked via SAF or received from another app) is moved,
- * deleted, or its access grant expires. A small JSON index next to the copies tracks metadata.
+ * Keeps imported documents (PDF and Word) as private copies under the app's internal storage,
+ * so they remain available even if the original file (picked via SAF or received from another
+ * app) is moved, deleted, or its access grant expires. A small JSON index next to the copies
+ * tracks metadata.
  *
  * Not safe for concurrent use from multiple threads; callers are expected to serialize access
  * (the ViewModel does this by only ever touching it from its own coroutine scope).
@@ -36,19 +43,22 @@ class PdfLibraryRepository(context: Context) {
         val entries = mutableListOf<LibraryEntry>()
         for (i in 0 until array.length()) {
             val obj = array.optJSONObject(i) ?: continue
+            val type = runCatching { DocumentType.valueOf(obj.optString("type", "PDF")) }
+                .getOrDefault(DocumentType.PDF)
             entries += LibraryEntry(
                 id = obj.optString("id"),
-                displayName = obj.optString("displayName", "Documento PDF"),
+                displayName = obj.optString("displayName", "Documento"),
                 addedAt = obj.optLong("addedAt"),
-                sizeBytes = obj.optLong("sizeBytes")
+                sizeBytes = obj.optLong("sizeBytes"),
+                type = type
             )
         }
         return entries.sortedByDescending { it.addedAt }
     }
 
-    fun importDocument(uri: Uri, displayName: String): LibraryEntry {
+    fun importDocument(uri: Uri, displayName: String, type: DocumentType): LibraryEntry {
         val id = UUID.randomUUID().toString()
-        val destFile = fileFor(id)
+        val destFile = fileFor(id, type)
 
         appContext.contentResolver.openInputStream(uri)?.use { input ->
             destFile.outputStream().use { output -> input.copyTo(output) }
@@ -58,16 +68,17 @@ class PdfLibraryRepository(context: Context) {
             id = id,
             displayName = displayName,
             addedAt = System.currentTimeMillis(),
-            sizeBytes = destFile.length()
+            sizeBytes = destFile.length(),
+            type = type
         )
 
         writeIndex(listOf(entry) + listEntries())
         return entry
     }
 
-    fun fileFor(entry: LibraryEntry): File = fileFor(entry.id)
+    fun fileFor(entry: LibraryEntry): File = fileFor(entry.id, entry.type)
 
-    private fun fileFor(id: String): File = File(dir, "$id.pdf")
+    private fun fileFor(id: String, type: DocumentType): File = File(dir, "$id.${type.extension}")
 
     fun delete(entry: LibraryEntry) {
         fileFor(entry).delete()
@@ -83,6 +94,7 @@ class PdfLibraryRepository(context: Context) {
                     put("displayName", entry.displayName)
                     put("addedAt", entry.addedAt)
                     put("sizeBytes", entry.sizeBytes)
+                    put("type", entry.type.name)
                 }
             )
         }
