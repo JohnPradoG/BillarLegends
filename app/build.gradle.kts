@@ -15,6 +15,20 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        // Checked-in debug key so every CI build is signed identically. CI runners are
+        // fresh VMs, so without this Gradle auto-generates a new (unpinned) debug key on
+        // every run, and Android refuses to install/update over the previous build since
+        // the signature no longer matches. This keystore's password/alias are the
+        // well-known Android debug defaults; it is never used to sign a release build.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
