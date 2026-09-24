@@ -1,5 +1,6 @@
 package com.billarlegends.pdfreader.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,7 +38,7 @@ import com.billarlegends.pdfreader.pdf.LibraryEntry
 import com.billarlegends.pdfreader.pdf.PdfViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PdfViewerScreen(
     viewModel: PdfViewModel,
