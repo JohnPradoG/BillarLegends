@@ -7,6 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,3 +38,19 @@ jobs:
         with:
           name: lector-pdf-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+      # GitHub Actions artifacts are only downloadable through the Actions blob storage
+      # host; also publish the APK as a release asset (served from github.com /
+      # objects.githubusercontent.com) so it can be fetched from environments that can't
+      # reach the artifact storage host directly.
+      - name: Publish APK as a GitHub Release asset
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest-debug-build --yes --cleanup-tag || true
+          gh release create latest-debug-build app/build/outputs/apk/debug/*.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Lector PDF - último build de depuración" \
+            --notes "APK de depuración generado automáticamente desde el commit $GITHUB_SHA (rama $GITHUB_REF_NAME)." \
+            --prerelease
