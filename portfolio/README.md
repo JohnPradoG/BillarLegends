@@ -15,6 +15,20 @@ el registro de tus negocios no digitales:
 Todo se combina en un dashboard único con el total invertido, el valor total y la
 ganancia consolidada, más un historial unificado de movimientos.
 
+## Sincronización automática
+
+No hace falta abrir la app y darle a "sincronizar" cada vez. Con `WorkManager`:
+
+- Al abrir la app se dispara una sincronización inmediata de todas las cuentas.
+- Cada ~30 minutos (mientras haya conexión a internet) se sincroniza todo en segundo
+  plano, aunque la app esté cerrada.
+
+Limitación real de Android: el sistema (Doze, ahorro de batería del fabricante, etc.)
+puede retrasar o agrupar esa ejecución en segundo plano. No es un push instantáneo en
+tiempo real; es la sincronización periódica más confiable que se puede lograr sin un
+servidor propio. El botón de sincronizar manual en "Cuentas" sigue disponible para
+forzar una actualización al instante.
+
 ## Cómo abrir el proyecto
 
 Este módulo se agregó al proyecto Gradle existente `BillarLegends`. Ábrelo completo en

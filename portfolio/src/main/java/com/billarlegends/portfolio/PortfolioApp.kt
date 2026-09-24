@@ -7,6 +7,7 @@ import com.billarlegends.portfolio.data.repository.BusinessRepository
 import com.billarlegends.portfolio.data.repository.ExnessRepository
 import com.billarlegends.portfolio.data.repository.PortfolioRepository
 import com.billarlegends.portfolio.security.SecureCredentialStore
+import com.billarlegends.portfolio.sync.PortfolioSyncScheduler
 
 /**
  * Contenedor de dependencias simple (sin librería de DI) para un módulo de este tamaño.
@@ -54,5 +55,11 @@ class PortfolioApp : Application() {
             businessDao = database.businessDao(),
             movementDao = database.movementDao(),
         )
+
+        // Sincronización automática: una vez al abrir la app y luego cada cierto tiempo en
+        // segundo plano, para que el resumen se mantenga al día sin tener que entrar a
+        // sincronizar cuenta por cuenta a mano.
+        PortfolioSyncScheduler.schedulePeriodic(this)
+        PortfolioSyncScheduler.syncNow(this)
     }
 }
