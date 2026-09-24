@@ -1,6 +1,6 @@
 package com.billarlegends.pdfreader.pdf
 
-import android.content.Context
+import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.graphics.pdf.PdfRenderer
@@ -10,7 +10,7 @@ import android.provider.OpenableColumns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,13 +19,15 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Owns the lifecycle of the currently open [PdfRenderer]. PdfRenderer can only have one
- * page open at a time and is not thread-safe, so every access to it is serialized through
- * [renderMutex] on a background dispatcher.
+ * Owns both the on-disk PDF library (import/list/delete, via [PdfLibraryRepository]) and the
+ * lifecycle of the currently open [PdfRenderer]. PdfRenderer can only have one page open at a
+ * time and is not thread-safe, so every access to it is serialized through [renderMutex].
  */
-class PdfViewModel : ViewModel() {
+class PdfViewModel(application: Application) : AndroidViewModel(application) {
 
-    var uiState by mutableStateOf<PdfUiState>(PdfUiState.Empty)
+    private val repository = PdfLibraryRepository(application)
+
+    var uiState by mutableStateOf<PdfUiState>(PdfUiState.Library(isBusy = true))
         private set
 
     private var renderer: PdfRenderer? = null
@@ -33,31 +35,47 @@ class PdfViewModel : ViewModel() {
     private val renderMutex = Mutex()
     private val pageCache = mutableMapOf<Int, Bitmap>()
 
-    fun openDocument(context: Context, uri: Uri) {
+    init {
+        viewModelScope.launch { refreshLibrary() }
+    }
+
+    /** Copies [uri] into the app's private storage and opens the copy. Used for both the
+     * file picker and PDFs received from other apps (share / "open with"). */
+    fun importAndOpen(uri: Uri) {
         viewModelScope.launch {
-            uiState = PdfUiState.Loading
-            closeCurrentDocumentLocked()
-
-            uiState = try {
-                val descriptor = withContext(Dispatchers.IO) {
-                    context.contentResolver.openFileDescriptor(uri, "r")
-                } ?: throw IllegalStateException("El proveedor de contenido no devolvió el archivo")
-
-                val newRenderer = withContext(Dispatchers.IO) { PdfRenderer(descriptor) }
-
-                fileDescriptor = descriptor
-                renderer = newRenderer
-
-                PdfUiState.Loaded(
-                    fileName = queryDisplayName(context, uri),
-                    pageCount = newRenderer.pageCount
-                )
-            } catch (e: SecurityException) {
-                PdfUiState.Error("Este PDF está protegido con contraseña y no se puede abrir.")
+            setBusy(true)
+            try {
+                val displayName = queryDisplayName(uri)
+                val entry = withContext(Dispatchers.IO) {
+                    repository.importDocument(uri, displayName)
+                }
+                openEntryInternal(entry)
             } catch (e: Exception) {
-                PdfUiState.Error("No se pudo abrir el PDF: ${e.message ?: "error desconocido"}")
+                showLibraryError("No se pudo importar el PDF: ${e.message ?: "error desconocido"}")
             }
         }
+    }
+
+    fun openEntry(entry: LibraryEntry) {
+        viewModelScope.launch { openEntryInternal(entry) }
+    }
+
+    fun closeViewer() {
+        viewModelScope.launch {
+            closeCurrentDocumentLocked()
+            refreshLibrary()
+        }
+    }
+
+    fun deleteEntry(entry: LibraryEntry) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repository.delete(entry) }
+            refreshLibrary()
+        }
+    }
+
+    fun dismissError() {
+        (uiState as? PdfUiState.Library)?.let { uiState = it.copy(errorMessage = null) }
     }
 
     suspend fun renderPage(index: Int, targetWidthPx: Int): Bitmap? {
@@ -89,14 +107,34 @@ class PdfViewModel : ViewModel() {
         }
     }
 
-    fun closeDocument() {
-        viewModelScope.launch {
-            closeCurrentDocumentLocked()
-            uiState = PdfUiState.Empty
+    private suspend fun openEntryInternal(entry: LibraryEntry) {
+        closeCurrentDocumentLocked()
+
+        uiState = try {
+            val file = repository.fileFor(entry)
+            val descriptor = withContext(Dispatchers.IO) {
+                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            }
+            val newRenderer = withContext(Dispatchers.IO) { PdfRenderer(descriptor) }
+
+            fileDescriptor = descriptor
+            renderer = newRenderer
+
+            PdfUiState.Loaded(entry = entry, pageCount = newRenderer.pageCount)
+        } catch (e: SecurityException) {
+            PdfUiState.Library(
+                entries = withContext(Dispatchers.IO) { repository.listEntries() },
+                errorMessage = "Este PDF está protegido con contraseña y no se puede abrir."
+            )
+        } catch (e: Exception) {
+            PdfUiState.Library(
+                entries = withContext(Dispatchers.IO) { repository.listEntries() },
+                errorMessage = "No se pudo abrir el PDF: ${e.message ?: "error desconocido"}"
+            )
         }
     }
 
-    /** Must only be called while holding [renderMutex], so it never races an in-flight [renderPage]. */
+    /** Acquires [renderMutex] itself, so it never races an in-flight [renderPage] call. */
     private suspend fun closeCurrentDocumentLocked() {
         renderMutex.withLock {
             withContext(Dispatchers.IO) {
@@ -110,15 +148,33 @@ class PdfViewModel : ViewModel() {
         }
     }
 
-    private fun queryDisplayName(context: Context, uri: Uri): String {
+    private suspend fun refreshLibrary() {
+        val entries = withContext(Dispatchers.IO) { repository.listEntries() }
+        uiState = PdfUiState.Library(entries = entries)
+    }
+
+    private fun setBusy(busy: Boolean) {
+        uiState = (uiState as? PdfUiState.Library)?.copy(isBusy = busy)
+            ?: PdfUiState.Library(isBusy = busy)
+    }
+
+    private suspend fun showLibraryError(message: String) {
+        uiState = PdfUiState.Library(
+            entries = withContext(Dispatchers.IO) { repository.listEntries() },
+            errorMessage = message
+        )
+    }
+
+    private fun queryDisplayName(uri: Uri): String {
         if (uri.scheme == "content") {
             runCatching {
-                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (nameIndex >= 0 && cursor.moveToFirst()) {
-                        return cursor.getString(nameIndex) ?: "Documento PDF"
+                getApplication<Application>().contentResolver
+                    .query(uri, null, null, null, null)?.use { cursor ->
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex >= 0 && cursor.moveToFirst()) {
+                            return cursor.getString(nameIndex) ?: "Documento PDF"
+                        }
                     }
-                }
             }
         }
         return uri.lastPathSegment ?: "Documento PDF"

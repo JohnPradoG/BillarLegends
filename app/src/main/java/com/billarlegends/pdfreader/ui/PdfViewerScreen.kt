@@ -8,8 +8,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.billarlegends.pdfreader.pdf.LibraryEntry
 import com.billarlegends.pdfreader.pdf.PdfViewModel
 import kotlinx.coroutines.launch
 
@@ -41,9 +41,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun PdfViewerScreen(
     viewModel: PdfViewModel,
-    fileName: String,
+    entry: LibraryEntry,
     pageCount: Int,
-    onOpenAnotherFile: () -> Unit,
     onClose: () -> Unit
 ) {
     val pagerState = rememberPagerState(initialPage = 0) { pageCount }
@@ -57,7 +56,7 @@ fun PdfViewerScreen(
                 title = {
                     Column {
                         Text(
-                            text = fileName,
+                            text = entry.displayName,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.titleMedium
@@ -70,15 +69,12 @@ fun PdfViewerScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Cerrar")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a Mis PDFs")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showJumpDialog = true }) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = "Ir a página")
-                    }
-                    IconButton(onClick = onOpenAnotherFile) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Abrir otro PDF")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors()

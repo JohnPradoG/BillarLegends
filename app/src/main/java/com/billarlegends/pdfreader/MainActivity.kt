@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
             else -> null
         }
         if (uri != null) {
-            viewModel.openDocument(applicationContext, uri)
+            viewModel.importAndOpen(uri)
         }
     }
 
