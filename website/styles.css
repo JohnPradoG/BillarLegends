@@ -342,8 +342,23 @@ img { max-width: 100%; display: block; }
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
-  line-height: 0;
+  background: var(--white);
 }
+.map-wrap iframe { line-height: 0; }
+.map-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--green-dark);
+  text-decoration: none;
+  border-top: 1px solid #e1e6e3;
+  transition: background 0.15s ease;
+}
+.map-link .icon { color: var(--green-dark); }
+.map-link:hover { background: var(--bg-alt); }
 
 /* ---------- Footer ---------- */
 .site-footer { background: var(--carbon); color: rgba(255,255,255,0.85); padding: 56px 0 0; }
