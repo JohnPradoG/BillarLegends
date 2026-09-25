@@ -265,9 +265,6 @@ img { max-width: 100%; display: block; }
 .gallery-item {
   aspect-ratio: 4/3;
   border-radius: var(--radius);
-  display: flex;
-  align-items: flex-end;
-  padding: 16px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow);
@@ -275,25 +272,100 @@ img { max-width: 100%; display: block; }
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .gallery-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-.gallery-svg {
+
+.carousel { position: absolute; inset: 0; }
+
+.carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.carousel-track::-webkit-scrollbar { display: none; }
+
+.carousel-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  position: relative;
+}
+.gallery-svg, .carousel-slide img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
-.gallery-item span {
-  position: relative;
-  color: var(--white);
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
-}
+
+/* Bottom label + darkening overlay, above the carousel, below arrows/dots */
 .gallery-item::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 55%, rgba(10, 20, 15, 0.55) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
+.gallery-label {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2;
+  color: var(--white);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+
+/* Arrows: only shown (via JS) on categories with more than one photo */
+.carousel-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10, 20, 15, 0.45);
+  color: var(--white);
+  font-size: 1.3rem;
+  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  transition: background 0.15s ease;
+}
+.carousel-arrow:hover { background: rgba(10, 20, 15, 0.7); }
+.carousel-arrow.prev { left: 10px; }
+.carousel-arrow.next { right: 10px; }
+.carousel.has-multiple .carousel-arrow { display: flex; }
+.carousel-arrow:disabled { opacity: 0.35; cursor: default; }
+
+.carousel-dots {
+  position: absolute;
+  right: 14px;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+.carousel-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: rgba(255,255,255,0.5);
+  cursor: pointer;
+}
+.carousel-dots .dot.active { background: var(--white); }
 
 /* ---------- Contact ---------- */
 .contact-grid {
