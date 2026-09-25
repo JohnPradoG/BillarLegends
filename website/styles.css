@@ -270,26 +270,30 @@ img { max-width: 100%; display: block; }
   padding: 16px;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--bg-alt);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.gallery-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.gallery-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 .gallery-item span {
   position: relative;
   color: var(--white);
   font-weight: 600;
   font-size: 0.95rem;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
 }
 .gallery-item::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.45) 100%);
+  background: linear-gradient(180deg, transparent 55%, rgba(10, 20, 15, 0.55) 100%);
 }
-.ph-1 { background: linear-gradient(135deg, #4fc3f7, #1b7a3d); }
-.ph-2 { background: linear-gradient(135deg, #1b7a3d, #145c30); }
-.ph-3 { background: linear-gradient(135deg, #2b2b2b, #4fc3f7); }
-.ph-4 { background: linear-gradient(135deg, #1a1a1a, #2e9e4f); }
-.ph-5 { background: linear-gradient(135deg, #145c30, #4fc3f7); }
-.ph-6 { background: linear-gradient(135deg, #2e9e4f, #1a1a1a); }
 
 /* ---------- Contact ---------- */
 .contact-grid {
