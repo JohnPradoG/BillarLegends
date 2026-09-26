@@ -28,7 +28,13 @@ document.getElementById('contactForm').addEventListener('submit', (e) => {
   ].filter(Boolean);
 
   const text = encodeURIComponent(lines.join('\n'));
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank', 'noopener');
+  const link = document.createElement('a');
+  link.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 });
 
 document.querySelectorAll('[data-carousel]').forEach((carousel) => {
